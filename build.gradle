@@ -33,6 +33,7 @@ dependencies {
 
     // Configuration
     implementation "de.maxhenkel.configbuilder:configbuilder:${project.config_version}"
+    include "de.maxhenkel.configbuilder:configbuilder:${project.config_version}"
 }
 
 processResources {
