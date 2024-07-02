@@ -1,0 +1,23 @@
+{
+  "schemaVersion": 1,
+  "id": "betterserverpacksfabric",
+  "version": "${version}",
+  "name": "BetterServerPacksFabric",
+  "description": "",
+  "authors": [],
+  "contact": {
+    "repo": "https://github.com/Fisch37/BetterServerPacksFabric"
+  },
+  "license": "MIT",
+  "environment": "server",
+  "entrypoints": {
+    "server": [
+      "de.fisch37.betterserverpacksfabric.Main"
+    ]
+  },
+  "depends": {
+    "fabricloader": ">=${loader_version}",
+    "fabric": "*",
+    "minecraft": "${minecraft_version}"
+  }
+}
