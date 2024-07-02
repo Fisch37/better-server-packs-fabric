@@ -79,6 +79,11 @@ public class PackCommand {
         }
 
         Main.config.url.set(url).save();
+        source.sendFeedback( () -> MSG_PREFIX.copy()
+                .append("Pack URL has been updated. Reloading hash...")
+                ,
+                true
+        );
         Main.updateHash(context.getSource().getServer(), source, pushAfterSet);
         return 1;
     }

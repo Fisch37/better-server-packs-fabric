@@ -4,8 +4,6 @@ import de.maxhenkel.configbuilder.ConfigBuilder;
 import net.fabricmc.api.DedicatedServerModInitializer;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.command.ServerCommandSource;
-import net.minecraft.text.ClickEvent;
-import net.minecraft.text.Text;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import org.slf4j.Logger;
@@ -146,13 +144,7 @@ public class Main implements DedicatedServerModInitializer {
 
                 if (source != null) {
                     source.sendFeedback(() -> MSG_PREFIX.copy()
-                                    .append("Pack URL and hash have been updated. Use ")
-                                    .append(Text.literal("/pack push").styled(style -> style.withClickEvent(
-                                            new ClickEvent(
-                                                    ClickEvent.Action.SUGGEST_COMMAND,
-                                                    "/pack push"
-                                            ))))
-                                    .append(" to apply the new resource pack to all online players")
+                                    .append("Pack Hash has been updated!")
                             ,
                             true);
                 }
