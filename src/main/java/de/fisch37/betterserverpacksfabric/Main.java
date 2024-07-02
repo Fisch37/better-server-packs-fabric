@@ -2,6 +2,7 @@ package de.fisch37.betterserverpacksfabric;
 
 import de.maxhenkel.configbuilder.ConfigBuilder;
 import net.fabricmc.api.DedicatedServerModInitializer;
+import net.fabricmc.fabric.api.event.lifecycle.v1.ServerLifecycleEvents;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.command.ServerCommandSource;
 import org.jetbrains.annotations.NotNull;
@@ -41,6 +42,12 @@ public class Main implements DedicatedServerModInitializer {
                 .saveAfterBuild(true)
                 .build();
         readHash();
+        if (config.rehashOnStart.get()) {
+            ServerLifecycleEvents.SERVER_STARTED.register(server -> {
+                updateHash(server, null, false);
+                config.rehashOnStart.set(false).save();
+            });
+        }
 
         PackCommand.register();
         ResourcePackHandler.register();
