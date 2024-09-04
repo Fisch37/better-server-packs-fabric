@@ -6,9 +6,11 @@ import de.maxhenkel.configbuilder.entry.ConfigEntry;
 public class Config {
     public ConfigEntry<String> url;
     public ConfigEntry<Boolean> rehashOnStart;
+    public ConfigEntry<Boolean> required;
 
     public Config(ConfigBuilder builder) {
         url = builder.stringEntry("url", "");
         rehashOnStart = builder.booleanEntry("rehash_on_start", false);
+        required = builder.booleanEntry("required", false);
     }
 }
