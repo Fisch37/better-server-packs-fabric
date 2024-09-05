@@ -4,7 +4,9 @@ import de.maxhenkel.configbuilder.ConfigBuilder;
 import de.maxhenkel.configbuilder.entry.ConfigEntry;
 import net.minecraft.registry.RegistryWrapper;
 import net.minecraft.text.Text;
+import org.jetbrains.annotations.Contract;
 import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 
 import java.util.Optional;
 
@@ -40,5 +42,16 @@ public class Config {
                 return Optional.empty();
             }
         }
+    }
+
+    @Contract("null, null -> _; !null, !null -> _")
+    public ConfigEntry<String> setPrompt(@Nullable Text prompt, @Nullable RegistryWrapper.WrapperLookup registries) {
+        if (prompt == null) {
+            this.prompt.set("");
+        } else {
+            assert registries != null; // See the contract
+            this.prompt.set(Text.Serialization.toJsonString(prompt, registries));
+        }
+        return this.prompt;
     }
 }
