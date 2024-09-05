@@ -129,7 +129,7 @@ public class PackCommand {
         source.sendFeedback(() -> MSG_PREFIX.copy()
                 .append("Pack is " + (required ? "required" : "optional"))
                 ,
-                true
+                false
         );
         return 1;
     }
