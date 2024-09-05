@@ -208,6 +208,15 @@ public class PackCommand {
                                             .formatted(Formatting.UNDERLINE)
                                     )
                                     .append("\n")
+                                    .append("Pack hash: ")
+                                    .append(Optional.ofNullable(Main.getHashString())
+                                            .map(s -> Text.literal(s)
+                                                    .formatted(Formatting.LIGHT_PURPLE)
+                                                    .formatted(Formatting.ITALIC)
+                                            )
+                                            .orElse(Text.literal("undetermined").formatted(Formatting.GRAY))
+                                    )
+                                    .append("\n")
                                     .append("Pack is ")
                                     .append(
                                             required

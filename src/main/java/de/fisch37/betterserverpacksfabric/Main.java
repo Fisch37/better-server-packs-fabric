@@ -67,6 +67,11 @@ public class Main implements DedicatedServerModInitializer {
         return hash;
     }
 
+    public static @Nullable String getHashString() {
+        byte[] hash = getHash();
+        return hash == null ? null : printHexBinary(hash);
+    }
+
     private static void saveHash() {
         if (hash == null) {
             getHashFile().delete();
