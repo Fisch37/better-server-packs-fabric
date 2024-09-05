@@ -9,6 +9,8 @@ import net.minecraft.command.CommandRegistryAccess;
 import net.minecraft.command.argument.EntityArgumentType;
 import net.minecraft.command.argument.TextArgumentType;
 import net.minecraft.server.command.ServerCommandSource;
+import net.minecraft.text.ClickEvent;
+import net.minecraft.text.Style;
 import net.minecraft.text.Text;
 import net.minecraft.util.Formatting;
 
@@ -67,7 +69,8 @@ public class PackCommand {
                         .then(literal("clear")
                                 .executes(PackCommand::clearPrompt)
                         )
-                );
+                ).then(literal("info")
+                        .executes(PackCommand::showInfo));
     }
 
     public static void register() {
@@ -186,6 +189,43 @@ public class PackCommand {
                 ,
                 true
         );
+        return 1;
+    }
+
+    private static int showInfo(CommandContext<ServerCommandSource> context) {
+        String url = Main.config.url.get();
+        boolean required = Main.config.required.get();
+        Optional<Text> prompt = Main.config.getPrompt(context.getSource().getRegistryManager());
+        context.getSource().sendFeedback(() ->
+                MSG_PREFIX.copy()
+                        .append("Pack URL: ")
+                        .append(Text.literal(url)
+                                .fillStyle(Style.EMPTY
+                                        .withClickEvent(new ClickEvent(ClickEvent.Action.OPEN_URL, url))
+                                )
+                                .formatted(Formatting.GREEN)
+                                .formatted(Formatting.UNDERLINE)
+                        )
+                        .append("\n")
+                        .append("Pack is ")
+                        .append(
+                                required
+                                        ? Text.literal("required")
+                                            .formatted(Formatting.RED)
+                                        : Text.literal("optional")
+                                            .formatted(Formatting.YELLOW)
+                        )
+                        .append("\n")
+                        .append(prompt
+                                .map(text -> Text.literal("Prompt: \n    ")
+                                        .append(text)
+                                )
+                                .orElseGet(() -> Text.literal("No prompt is set"))
+                        )
+                ,
+                false
+        );
+
         return 1;
     }
 }
