@@ -24,8 +24,8 @@ public class ResourcePackHandler {
                     url,
                     Main.printHexBinary(Main.getHash()),
                     Main.config.required.get(),
-                    java.util.Optional.empty()
-            ));
+                    Main.config.getPrompt(handler.player.getRegistryManager()))
+            );
         }
     }
 
