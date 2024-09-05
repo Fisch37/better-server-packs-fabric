@@ -32,7 +32,7 @@ public class PackCommand {
 
     private static LiteralArgumentBuilder<ServerCommandSource> makeCommand(CommandRegistryAccess registryAccess) {
         return literal("pack")
-                .requires(required -> required.hasPermissionLevel(4))
+                .requires(required -> required.hasPermissionLevel(3))
                 .then(literal("set")
                         .executes(PackCommand::disablePack)
                         .then(argument("url", string())
