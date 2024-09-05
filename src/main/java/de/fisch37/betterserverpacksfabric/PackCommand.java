@@ -196,35 +196,44 @@ public class PackCommand {
         String url = Main.config.url.get();
         boolean required = Main.config.required.get();
         Optional<Text> prompt = Main.config.getPrompt(context.getSource().getRegistryManager());
-        context.getSource().sendFeedback(() ->
-                MSG_PREFIX.copy()
-                        .append("Pack URL: ")
-                        .append(Text.literal(url)
-                                .fillStyle(Style.EMPTY
-                                        .withClickEvent(new ClickEvent(ClickEvent.Action.OPEN_URL, url))
-                                )
-                                .formatted(Formatting.GREEN)
-                                .formatted(Formatting.UNDERLINE)
-                        )
-                        .append("\n")
-                        .append("Pack is ")
-                        .append(
-                                required
-                                        ? Text.literal("required")
-                                            .formatted(Formatting.RED)
-                                        : Text.literal("optional")
-                                            .formatted(Formatting.YELLOW)
-                        )
-                        .append("\n")
-                        .append(prompt
-                                .map(text -> Text.literal("Prompt: \n    ")
-                                        .append(text)
-                                )
-                                .orElseGet(() -> Text.literal("No prompt is set"))
-                        )
-                ,
-                false
-        );
+        if (!url.isEmpty()) {
+            context.getSource().sendFeedback(() ->
+                            MSG_PREFIX.copy()
+                                    .append("Pack URL: ")
+                                    .append(Text.literal(url)
+                                            .fillStyle(Style.EMPTY
+                                                    .withClickEvent(new ClickEvent(ClickEvent.Action.OPEN_URL, url))
+                                            )
+                                            .formatted(Formatting.GREEN)
+                                            .formatted(Formatting.UNDERLINE)
+                                    )
+                                    .append("\n")
+                                    .append("Pack is ")
+                                    .append(
+                                            required
+                                                    ? Text.literal("required")
+                                                    .formatted(Formatting.RED)
+                                                    : Text.literal("optional")
+                                                    .formatted(Formatting.YELLOW)
+                                    )
+                                    .append("\n")
+                                    .append(prompt
+                                            .map(text -> Text.literal("Prompt: \n    ")
+                                                    .append(text)
+                                            )
+                                            .orElseGet(() -> Text.literal("No prompt is set"))
+                                    )
+                    ,
+                    false
+            );
+        } else {
+            context.getSource().sendFeedback(() ->
+                    MSG_PREFIX.copy()
+                            .append("No resourcepack is set")
+                    ,
+                    false
+            );
+        }
 
         return 1;
     }
