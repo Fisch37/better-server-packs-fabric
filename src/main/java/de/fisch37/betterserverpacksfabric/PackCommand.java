@@ -1,5 +1,6 @@
 package de.fisch37.betterserverpacksfabric;
 
+import com.mojang.brigadier.arguments.BoolArgumentType;
 import com.mojang.brigadier.arguments.StringArgumentType;
 import com.mojang.brigadier.builder.LiteralArgumentBuilder;
 import com.mojang.brigadier.context.CommandContext;
@@ -47,6 +48,12 @@ public class PackCommand {
                             .executes(context -> ResourcePackHandler.pushTo(
                                     EntityArgumentType.getPlayers(context, "players")
                             ))
+                    )
+            )
+            .then(literal("required")
+                    .executes(PackCommand::getRequired)
+                    .then(argument("required", BoolArgumentType.bool())
+                            .executes(PackCommand::setRequired)
                     )
             );
 
@@ -96,6 +103,33 @@ public class PackCommand {
 
     private static int reloadPack(CommandContext<ServerCommandSource> context, boolean pushAfterReload) {
         Main.updateHash(context.getSource().getServer(), context.getSource(), pushAfterReload);
+        return 1;
+    }
+
+    private static int getRequired(CommandContext<ServerCommandSource> context) {
+        ServerCommandSource source = context.getSource();
+
+        Boolean required = Main.config.required.get();
+
+        source.sendFeedback(() -> MSG_PREFIX.copy()
+                .append("Pack is " + (required ? "required" : "optional"))
+                ,
+                true
+        );
+        return 1;
+    }
+
+    private static int setRequired(CommandContext<ServerCommandSource> context) {
+        ServerCommandSource source = context.getSource();
+
+        Boolean required = BoolArgumentType.getBool(context, "required");
+        Main.config.required.set(required).save();
+
+        source.sendFeedback( () -> MSG_PREFIX.copy()
+                .append("Pack is now " + (required ? "required" : "optional"))
+                ,
+                true
+        );
         return 1;
     }
 }

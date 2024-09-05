@@ -23,7 +23,7 @@ public class ResourcePackHandler {
                     UUID.nameUUIDFromBytes(url.getBytes(StandardCharsets.UTF_8)),
                     url,
                     Main.printHexBinary(Main.getHash()),
-                    false,
+                    Main.config.required.get(),
                     java.util.Optional.empty()
             ));
         }
