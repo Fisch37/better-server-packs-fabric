@@ -81,6 +81,52 @@ public class PackCommand {
         );
     }
 
+    private static void updateHashWithContext(ServerCommandSource source, boolean pushAfterSet) {
+        source.sendFeedback(() -> MSG_PREFIX.copy()
+                .append("Updating pack hash...")
+                ,
+                true
+        );
+        Main.updateHash().thenAccept(result -> {
+            // Let's all hope that this doesn't cause threading issues :+1:
+            if (result == null) {
+                // Error
+                source.sendFeedback(() -> MSG_PREFIX.copy()
+                                .append(Text.literal(
+                                        "Failed to update hash."
+                                                + "Please check the server logs for more information."
+                                        )
+                                        .formatted(Formatting.RED)
+                                )
+                        ,
+                        true
+                );
+            } else if (result) {
+                // Hash updated
+                source.sendFeedback(() -> MSG_PREFIX.copy()
+                                .append("Pack Hash has been updated!")
+                        ,
+                        true);
+
+                if (pushAfterSet) {
+                    source.sendFeedback(() -> MSG_PREFIX.copy()
+                                    .append("Pushing to players...")
+                            ,
+                            true);
+                    ResourcePackHandler.pushTo(source.getServer());
+                }
+            } else {
+                // Hash removed (no pack selected)
+                source.sendFeedback(() -> MSG_PREFIX.copy()
+                                .append("BetterServerPacks has been disabled. ")
+                                .append("This cannot be pushed to the players :(")
+                        ,
+                        true
+                );
+            }
+        });
+    }
+
     private static int setPack(CommandContext<ServerCommandSource> context, boolean pushAfterSet) {
         final Supplier<Text> INVALID_URL_ERROR = (
                 () -> MSG_PREFIX.copy()
@@ -109,18 +155,18 @@ public class PackCommand {
                 ,
                 true
         );
-        Main.updateHash(context.getSource().getServer(), source, pushAfterSet);
+        updateHashWithContext(source, pushAfterSet);
         return 1;
     }
 
     private static int disablePack(CommandContext<ServerCommandSource> context) {
         Main.config.url.set("").save();
-        Main.updateHash(context.getSource().getServer(), context.getSource(), false);
+        updateHashWithContext(context.getSource(), false);
         return 1;
     }
 
     private static int reloadPack(CommandContext<ServerCommandSource> context, boolean pushAfterReload) {
-        Main.updateHash(context.getSource().getServer(), context.getSource(), pushAfterReload);
+        updateHashWithContext(context.getSource(), pushAfterReload);
         return 1;
     }
 
