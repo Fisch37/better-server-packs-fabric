@@ -30,7 +30,18 @@ to update the server resourcepack or push an update out to every user.
 - `/pack push [<players>]`
   - Forcibly pushes a resourcepack update to the selected
     players, or all if the player argument is unspecified.
+- `/pack required [true|false]`
+  - Sets if the resourcepack is required\* to join the server
+    (simply calling `/pack required` will show the current
+    value of the option.
+- `/pack prompt [<prompt>|clear]`
+  - Set the prompt shown to the player when joining the server
+    or remove it. Calling this with no parameters will show the
+    current prompt.
+- `/pack info`
+  - Shows the current server resourcepack settings (managed by BSP).
 
+_\* Setting `required` to true cannot guarantee that players actually use the resourcepack. Modified clients can circumvent this option_
 
 
 This project is a rewrite of [BetterServerPacks](https://github.com/Fisch37/better-server-resourcepack) for 1.21 Fabric servers.
