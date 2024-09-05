@@ -114,7 +114,7 @@ public class PackCommand {
     }
 
     private static int disablePack(CommandContext<ServerCommandSource> context) {
-        Main.config.url.set("");
+        Main.config.url.set("").save();
         Main.updateHash(context.getSource().getServer(), context.getSource(), false);
         return 1;
     }
