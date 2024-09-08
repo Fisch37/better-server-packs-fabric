@@ -9,10 +9,13 @@
     "repo": "https://github.com/Fisch37/BetterServerPacksFabric"
   },
   "license": "MIT",
-  "environment": "server",
+  "environment": "*",
   "entrypoints": {
     "server": [
       "de.fisch37.betterserverpacksfabric.Main"
+    ],
+    "client": [
+        "de.fisch37.betterserverpacksfabric.client.MainClient"
     ]
   },
   "depends": {
