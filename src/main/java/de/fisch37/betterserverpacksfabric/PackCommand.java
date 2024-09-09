@@ -4,6 +4,7 @@ import com.mojang.brigadier.arguments.BoolArgumentType;
 import com.mojang.brigadier.arguments.StringArgumentType;
 import com.mojang.brigadier.builder.LiteralArgumentBuilder;
 import com.mojang.brigadier.context.CommandContext;
+import de.fisch37.betterserverpacksfabric.networking.Networking;
 import net.fabricmc.fabric.api.command.v2.CommandRegistrationCallback;
 import net.minecraft.command.CommandRegistryAccess;
 import net.minecraft.command.argument.EntityArgumentType;
@@ -32,7 +33,7 @@ public class PackCommand {
 
     private static LiteralArgumentBuilder<ServerCommandSource> makeCommand(CommandRegistryAccess registryAccess) {
         return literal("pack")
-                .requires(required -> required.hasPermissionLevel(3))
+                .requires(Main::hasConfigAccess)
                 .then(literal("set")
                         .executes(PackCommand::disablePack)
                         .then(argument("url", string())
@@ -150,6 +151,7 @@ public class PackCommand {
         }
 
         Main.config.url.set(url).save();
+        sendUpdate(context);
         source.sendFeedback( () -> MSG_PREFIX.copy()
                 .append("Pack URL has been updated. Reloading hash...")
                 ,
@@ -188,6 +190,7 @@ public class PackCommand {
 
         Boolean required = BoolArgumentType.getBool(context, "required");
         Main.config.required.set(required).save();
+        sendUpdate(context);
 
         source.sendFeedback( () -> MSG_PREFIX.copy()
                 .append("Pack is now " + (required ? "required" : "optional"))
@@ -217,6 +220,7 @@ public class PackCommand {
         final Text prompt = TextArgumentType.getTextArgument(context, "prompt");
         Main.config.setPrompt(prompt, context.getSource().getRegistryManager())
                 .save();
+        sendUpdate(context);
         context.getSource().sendFeedback(
                 () -> MSG_PREFIX.copy()
                         .append("Prompt has been set to: ")
@@ -229,6 +233,7 @@ public class PackCommand {
 
     private static int clearPrompt(CommandContext<ServerCommandSource> context) {
         Main.config.setPrompt(null, null);
+        sendUpdate(context);
         context.getSource().sendFeedback(
                 () -> MSG_PREFIX.copy()
                         .append("Prompt has been removed")
@@ -291,5 +296,9 @@ public class PackCommand {
         }
 
         return 1;
+    }
+
+    private static void sendUpdate(CommandContext<ServerCommandSource> context) {
+        Networking.sendConfigUpdate(context.getSource().getServer());
     }
 }

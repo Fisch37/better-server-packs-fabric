@@ -68,6 +68,13 @@ public class Main implements DedicatedServerModInitializer {
         return hash == null ? null : printHexBinary(hash);
     }
 
+    public static boolean hasConfigAccess(@NotNull ServerPlayerEntity player) {
+        return player.hasPermissionLevel(3);
+    }
+    public static boolean hasConfigAccess(@NotNull ServerCommandSource source) {
+        return source.hasPermissionLevel(3);
+    }
+
     private static void saveHash() {
         if (hash == null) {
             getHashFile().delete();
