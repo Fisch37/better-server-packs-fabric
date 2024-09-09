@@ -13,7 +13,7 @@ import net.minecraft.text.Text;
 import org.jetbrains.annotations.Nullable;
 
 public class MainClient implements ClientModInitializer {
-    private static Observable<@Nullable Boolean> canChangeConfig = Observable.of(null);
+    private static final Observable<@Nullable Boolean> canChangeConfig = Observable.of(null);
     private static final Observable<@Nullable PackState> packState = Observable.of(null);
     private static boolean isConnected = false;
 
@@ -30,7 +30,7 @@ public class MainClient implements ClientModInitializer {
         );
         ClientPlayConnectionEvents.JOIN.register(((handler, sender, client) -> isConnected = true));
         ClientPlayConnectionEvents.DISCONNECT.register(((handler, client) -> {
-            canChangeConfig = null;
+            canChangeConfig.set(null);
             isConnected = false;
         }));
         ClientTickEvents.END_CLIENT_TICK.register(client -> {
