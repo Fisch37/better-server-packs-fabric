@@ -1,0 +1,11 @@
+{  "bsp.config_ui.required": "Required:",
+"bsp.config_ui.reshash": "Recalculate Hash Next Restart:",
+"key.bsp.open_config": "Open Pack Configuration",
+"bsp.toast.race_permission": "You're too fast!",
+"bsp.toast.race_pack": "You're too fast!",
+"bsp.toast.race_permission.description": "The server is a bit behind, please wait a bit before opening the config (Racing: Permission)",
+"bsp.toas.race_pack.description": "The server is a bit behind, please wait a bit before opening the config (Racing: PackState)",
+"bsp.toast.no_permission": "No Permission",
+"bsp.toast.no_permission.description": "You don't have permission to change this server's config (sorry)"
+
+}
