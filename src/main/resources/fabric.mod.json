@@ -11,8 +11,11 @@
   "license": "MIT",
   "environment": "*",
   "entrypoints": {
-    "server": [
+    "main": [
       "de.fisch37.betterserverpacksfabric.Main"
+    ],
+    "server": [
+      "de.fisch37.betterserverpacksfabric.ServerMain"
     ],
     "client": [
         "de.fisch37.betterserverpacksfabric.client.MainClient"
