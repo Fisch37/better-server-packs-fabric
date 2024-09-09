@@ -1,6 +1,5 @@
 package de.fisch37.betterserverpacksfabric;
 
-import de.fisch37.betterserverpacksfabric.networking.CanChangeConfigPacket;
 import de.fisch37.betterserverpacksfabric.networking.Networking;
 import de.maxhenkel.configbuilder.ConfigBuilder;
 import net.fabricmc.api.DedicatedServerModInitializer;
@@ -53,9 +52,7 @@ public class ServerMain implements DedicatedServerModInitializer {
 
     private void registerEvents() {
         ServerPlayConnectionEvents.JOIN.register((handler, sender, server) -> {
-            final var player = handler.player;
-            Networking.CHANNEL.serverHandle(player)
-                    .send(new CanChangeConfigPacket(ServerMain.hasConfigAccess(player)));
+            Networking.sendAccessUpdate(handler.player);
         });
     }
 

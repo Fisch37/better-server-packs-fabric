@@ -1,9 +1,13 @@
 package de.fisch37.betterserverpacksfabric.networking;
 
+import com.mojang.authlib.GameProfile;
 import de.fisch37.betterserverpacksfabric.ServerMain;
 import io.wispforest.owo.network.OwoNetChannel;
 import net.minecraft.server.MinecraftServer;
+import net.minecraft.server.network.ServerPlayerEntity;
 import net.minecraft.util.Identifier;
+
+import java.util.Collection;
 
 import static de.fisch37.betterserverpacksfabric.Main.MOD_ID;
 import static de.fisch37.betterserverpacksfabric.ServerMain.config;
@@ -35,5 +39,14 @@ public class Networking {
                 .filter(ServerMain::hasConfigAccess)
                 .toList();
         CHANNEL.serverHandle(targets).send(PackState.fromConfig(config, server.getRegistryManager()));
+    }
+
+    public static void sendAccessUpdate(ServerPlayerEntity player) {
+        Networking.CHANNEL.serverHandle(player)
+                .send(new CanChangeConfigPacket(ServerMain.hasConfigAccess(player)));
+    }
+
+    public static void sendAccessUpdate(MinecraftServer server, Collection<GameProfile> targets) {
+        targets.forEach(target -> sendAccessUpdate(server.getPlayerManager().getPlayer(target.getId())));
     }
 }

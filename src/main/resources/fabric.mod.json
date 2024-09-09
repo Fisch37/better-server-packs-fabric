@@ -21,6 +21,9 @@
         "de.fisch37.betterserverpacksfabric.client.MainClient"
     ]
   },
+  "mixins": [
+    "mixins.json"
+  ],
   "depends": {
     "fabricloader": ">=${loader_version}",
     "fabric": "*",
