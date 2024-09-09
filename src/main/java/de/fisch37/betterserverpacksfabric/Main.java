@@ -1,8 +1,13 @@
 package de.fisch37.betterserverpacksfabric;
 
+import de.fisch37.betterserverpacksfabric.networking.CanChangeConfigPacket;
+import de.fisch37.betterserverpacksfabric.networking.Networking;
 import de.maxhenkel.configbuilder.ConfigBuilder;
 import net.fabricmc.api.DedicatedServerModInitializer;
 import net.fabricmc.fabric.api.event.lifecycle.v1.ServerLifecycleEvents;
+import net.fabricmc.fabric.api.networking.v1.ServerPlayConnectionEvents;
+import net.minecraft.server.command.ServerCommandSource;
+import net.minecraft.server.network.ServerPlayerEntity;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import org.slf4j.Logger;
@@ -47,6 +52,16 @@ public class Main implements DedicatedServerModInitializer {
 
         PackCommand.register();
         ResourcePackHandler.register();
+        Networking.registerAll();
+        registerEvents();
+    }
+
+    private void registerEvents() {
+        ServerPlayConnectionEvents.JOIN.register((handler, sender, server) -> {
+            final var player = handler.player;
+            Networking.CHANNEL.serverHandle(player)
+                    .send(new CanChangeConfigPacket(Main.hasConfigAccess(player)));
+        });
     }
 
     public static Path getModConfigFolder() {
