@@ -8,6 +8,7 @@ import net.minecraft.server.network.ServerPlayerEntity;
 import net.minecraft.util.Identifier;
 
 import java.util.Collection;
+import java.util.List;
 
 import static de.fisch37.betterserverpacksfabric.Main.MOD_ID;
 import static de.fisch37.betterserverpacksfabric.ServerMain.config;
@@ -32,18 +33,27 @@ public class Networking {
         });
     }
 
+    public static void sendConfigUpdate(Collection<ServerPlayerEntity> targets) {
+        CHANNEL.serverHandle(targets).send(PackState.fromConfig(
+                config,
+                targets.iterator().next().getRegistryManager()
+        ));
+    }
     public static void sendConfigUpdate(MinecraftServer server) {
-        var targets = server.getPlayerManager()
-                .getPlayerList()
+        sendConfigUpdate(server.getPlayerManager().getPlayerList()
                 .stream()
                 .filter(ServerMain::hasConfigAccess)
-                .toList();
-        CHANNEL.serverHandle(targets).send(PackState.fromConfig(config, server.getRegistryManager()));
+                .toList()
+        );
     }
 
     public static void sendAccessUpdate(ServerPlayerEntity player) {
+        final var hasAccess = ServerMain.hasConfigAccess(player);
         Networking.CHANNEL.serverHandle(player)
-                .send(new CanChangeConfigPacket(ServerMain.hasConfigAccess(player)));
+                .send(new CanChangeConfigPacket(hasAccess));
+        if (hasAccess) {
+            sendConfigUpdate(List.of(player));
+        }
     }
 
     public static void sendAccessUpdate(MinecraftServer server, Collection<GameProfile> targets) {
