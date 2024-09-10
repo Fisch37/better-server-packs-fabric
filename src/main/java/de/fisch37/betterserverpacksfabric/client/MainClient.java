@@ -26,7 +26,7 @@ public class MainClient implements ClientModInitializer {
         );
         Networking.CHANNEL.registerClientbound(
                 PackState.class,
-                (packet, access) -> {}
+                (packet, access) -> packState.set(packet)
         );
         ClientPlayConnectionEvents.JOIN.register(((handler, sender, client) -> isConnected = true));
         ClientPlayConnectionEvents.DISCONNECT.register(((handler, client) -> {
