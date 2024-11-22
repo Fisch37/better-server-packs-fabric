@@ -9,6 +9,8 @@ import net.minecraft.server.command.ServerCommandSource;
 import net.minecraft.server.network.ServerPlayerEntity;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.*;
 import java.net.MalformedURLException;
@@ -21,10 +23,10 @@ import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.util.concurrent.CompletableFuture;
 
-import static de.fisch37.betterserverpacksfabric.Main.LOGGER;
 import static de.fisch37.betterserverpacksfabric.Main.MOD_ID;
 
 public class ServerMain implements DedicatedServerModInitializer {
+    public static final Logger LOGGER = LoggerFactory.getLogger("BSP Server");
     private static final byte SHA1_HASH_SIZE = 20;
 
     public static Config config;

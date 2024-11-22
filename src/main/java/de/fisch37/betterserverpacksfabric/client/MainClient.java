@@ -11,11 +11,19 @@ import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents;
 import net.fabricmc.fabric.api.client.networking.v1.ClientPlayConnectionEvents;
 import net.minecraft.text.Text;
 import org.jetbrains.annotations.Nullable;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 public class MainClient implements ClientModInitializer {
+    public static final Logger LOGGER = LoggerFactory.getLogger("BSP Client");
     private static final Observable<@Nullable Boolean> canChangeConfig = Observable.of(null);
     private static final Observable<@Nullable PackState> packState = Observable.of(null);
     private static boolean isConnected = false;
+
+    static {
+        packState.observe(state -> LOGGER.info("Received new pack state"));
+        canChangeConfig.observe(b -> LOGGER.info("Updated permission state to {}", b));
+    }
 
     @Override
     public void onInitializeClient() {

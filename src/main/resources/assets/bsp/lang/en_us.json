@@ -8,6 +8,12 @@
 "bsp.toast.no_permission": "No Permission",
 "bsp.toast.no_permission.description": "You don't have permission to change this server's config (sorry)",
 "bsp.config_ui.save": "Save",
-"bsp.config_ui.cancel": "Cancel"
+"bsp.config_ui.cancel": "Cancel",
+"bsp.config_ui.reload": "Reload Config",
+"bsp.config_ui.warn_desync": "WARNING! Server config is out of sync! Reload to show the new version",
+"bsp.config_ui.save_warn_desync.title": "WARNING",
+"bsp.config_ui.save_warn_desync": "Someone else has changed these settings while you were editing them. Saving now will discard their changes. Continue?",
+"bsp.config_ui.save_warn_desync.save": "Save Anyway",
+"bsp.config_ui.save_warn_desync.cancel": "Cancel"
 
 }

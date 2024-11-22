@@ -163,6 +163,7 @@ public class PackCommand {
 
     private static int disablePack(CommandContext<ServerCommandSource> context) {
         ServerMain.config.url.set("").save();
+        sendUpdate(context);
         updateHashWithContext(context.getSource(), false);
         return 1;
     }

@@ -11,6 +11,7 @@ import java.util.Collection;
 import java.util.List;
 
 import static de.fisch37.betterserverpacksfabric.Main.MOD_ID;
+import static de.fisch37.betterserverpacksfabric.ServerMain.LOGGER;
 import static de.fisch37.betterserverpacksfabric.ServerMain.config;
 
 public class Networking {
@@ -38,6 +39,7 @@ public class Networking {
                 config,
                 targets.iterator().next().getRegistryManager()
         ));
+        LOGGER.info("Sent config update to players");
     }
     public static void sendConfigUpdate(MinecraftServer server) {
         sendConfigUpdate(server.getPlayerManager().getPlayerList()
