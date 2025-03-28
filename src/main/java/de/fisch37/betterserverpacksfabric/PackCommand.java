@@ -248,7 +248,7 @@ public class PackCommand {
                                     .append("Pack URL: ")
                                     .append(Text.literal(url)
                                             .fillStyle(Style.EMPTY
-                                                    .withClickEvent(new ClickEvent(ClickEvent.Action.OPEN_URL, url))
+                                                    .withClickEvent(new ClickEvent.OpenUrl(URI.create(url)))
                                             )
                                             .formatted(Formatting.GREEN)
                                             .formatted(Formatting.UNDERLINE)
