@@ -23,9 +23,9 @@ public class ResourcePackHandler {
                     UUID.nameUUIDFromBytes(url.getBytes(StandardCharsets.UTF_8)),
                     url,
                     Main.printHexBinary(Main.getHash()),
-                    false,
-                    java.util.Optional.empty()
-            ));
+                    Main.config.required.get(),
+                    Main.config.getPrompt(handler.player.getRegistryManager()))
+            );
         }
     }
 

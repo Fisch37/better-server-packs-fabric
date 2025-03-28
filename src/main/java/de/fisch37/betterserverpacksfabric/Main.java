@@ -3,8 +3,6 @@ package de.fisch37.betterserverpacksfabric;
 import de.maxhenkel.configbuilder.ConfigBuilder;
 import net.fabricmc.api.DedicatedServerModInitializer;
 import net.fabricmc.fabric.api.event.lifecycle.v1.ServerLifecycleEvents;
-import net.minecraft.server.MinecraftServer;
-import net.minecraft.server.command.ServerCommandSource;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import org.slf4j.Logger;
@@ -20,9 +18,7 @@ import java.security.DigestInputStream;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.util.HexFormat;
-
-import static de.fisch37.betterserverpacksfabric.PackCommand.MSG_PREFIX;
-
+import java.util.concurrent.CompletableFuture;
 
 public class Main implements DedicatedServerModInitializer {
     public static final String MOD_ID = "betterserverpacks";
@@ -44,7 +40,7 @@ public class Main implements DedicatedServerModInitializer {
         readHash();
         if (config.rehashOnStart.get()) {
             ServerLifecycleEvents.SERVER_STARTED.register(server -> {
-                updateHash(server, null, false);
+                updateHash();
                 config.rehashOnStart.set(false).save();
             });
         }
@@ -65,6 +61,11 @@ public class Main implements DedicatedServerModInitializer {
 
     public static byte @Nullable [] getHash() {
         return hash;
+    }
+
+    public static @Nullable String getHashString() {
+        byte[] hash = getHash();
+        return hash == null ? null : printHexBinary(hash);
     }
 
     private static void saveHash() {
@@ -106,57 +107,48 @@ public class Main implements DedicatedServerModInitializer {
         hash = readHexBinary(newHashHex);
     }
 
-    public static void updateHash(
-            MinecraftServer server,
-            @Nullable ServerCommandSource source,
-            boolean pushAfterSet
-    ) throws IllegalStateException {
-        // TODO: Segregate the feedback somehow
+    // Some might say the ternary boolean is the product of satan
+    // I think it's a perfectly valid option >:)
+    public static CompletableFuture<@Nullable Boolean> updateHash() throws IllegalStateException {
+        final var future = new CompletableFuture<Boolean>();
         if (config.url.get().isEmpty()){
             hash = null;
-            if (source != null) {
-                source.sendFeedback(() -> MSG_PREFIX.copy()
-                                .append("BetterServerPacks has been disabled. ")
-                                .append("This cannot be pushed to the players :(")
-                        ,
-                        true
-                );
-            }
+            future.complete(false);
+            return future;
         }
-        else {
-            URL url;
-            try {
-                url = new URI(config.url.get()).toURL();
-            } catch (MalformedURLException | URISyntaxException e) {
-                throw new IllegalStateException("Pack URL has invalid format", e);
-            }
-            server.execute(() -> {
-                MessageDigest digest;
-                try {
-                    digest = MessageDigest.getInstance("SHA-1");
-                } catch (NoSuchAlgorithmException e) {
-                    // SHA-1 is required per java docs
-                    LOGGER.error("JVM does not have SHA-1 hashing... WTF?");
-                    return;
-                }
-                try (InputStream data = url.openStream()) {
-                    new DigestInputStream(data, digest).readAllBytes();
-                } catch (IOException e) {
-                    LOGGER.error("Failed to load resource pack at {}", url);
-                    return;
-                }
-                hash = digest.digest();
-                Main.saveHash();
-                if (pushAfterSet) ResourcePackHandler.pushTo(server);
 
-                if (source != null) {
-                    source.sendFeedback(() -> MSG_PREFIX.copy()
-                                    .append("Pack Hash has been updated!")
-                            ,
-                            true);
-                }
-            });
+        URL url;
+        try {
+            url = new URI(config.url.get()).toURL();
+        } catch (MalformedURLException | URISyntaxException e) {
+            throw new IllegalStateException("Pack URL has invalid format", e);
         }
+
+        // Ooo, threading in Minecraft code!
+        // It's fine though, as long as we don't touch any of Minecraft's stuff
+        new Thread(() -> {
+            MessageDigest digest;
+            try {
+                digest = MessageDigest.getInstance("SHA-1");
+            } catch (NoSuchAlgorithmException e) {
+                // SHA-1 is required per java docs
+                LOGGER.error("JVM does not have SHA-1 hashing... WTF?");
+                future.complete(null);
+                return;
+            }
+            try (InputStream data = url.openStream()) {
+                new DigestInputStream(data, digest).readAllBytes();
+            } catch (IOException e) {
+                LOGGER.error("Failed to load resource pack at {}", url);
+                future.complete(null);
+                return;
+            }
+            hash = digest.digest();
+            Main.saveHash();
+
+            future.complete(true);
+        }, "BSPReloadThread").start();
+        return future;
     }
 
 
