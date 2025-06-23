@@ -20,6 +20,7 @@ repositories {
         name = 'henkelmax.public'
         url = 'https://maven.maxhenkel.de/repository/public'
     }
+    maven { url 'https://maven.wispforest.io/releases/' }
 }
 
 dependencies {
@@ -34,6 +35,10 @@ dependencies {
     // Configuration
     implementation "de.maxhenkel.configbuilder:configbuilder:${project.config_version}"
     include "de.maxhenkel.configbuilder:configbuilder:${project.config_version}"
+
+    // GUI and Networking and Config?
+    modImplementation "io.wispforest:owo-lib:${project.owo_version}"
+    include "io.wispforest:owo-sentinel:${project.owo_version}"
 }
 
 processResources {

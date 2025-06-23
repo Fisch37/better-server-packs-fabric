@@ -17,14 +17,14 @@ public class ResourcePackHandler {
     }
 
     public static void push(ServerPlayNetworkHandler handler) {
-        if (Main.getHash() != null) {
-            final String url = Main.config.url.get();
+        if (ServerMain.getHash() != null) {
+            final String url = ServerMain.config.url.get();
             handler.sendPacket(new ResourcePackSendS2CPacket(
                     UUID.nameUUIDFromBytes(url.getBytes(StandardCharsets.UTF_8)),
                     url,
-                    Main.printHexBinary(Main.getHash()),
-                    Main.config.required.get(),
-                    Main.config.getPrompt(handler.player.getRegistryManager()))
+                    Main.printHexBinary(ServerMain.getHash()),
+                    ServerMain.config.required.get(),
+                    ServerMain.config.getPrompt(handler.player.getRegistryManager()))
             );
         }
     }

@@ -4,6 +4,7 @@ import com.mojang.brigadier.arguments.BoolArgumentType;
 import com.mojang.brigadier.arguments.StringArgumentType;
 import com.mojang.brigadier.builder.LiteralArgumentBuilder;
 import com.mojang.brigadier.context.CommandContext;
+import de.fisch37.betterserverpacksfabric.networking.Networking;
 import net.fabricmc.fabric.api.command.v2.CommandRegistrationCallback;
 import net.minecraft.command.CommandRegistryAccess;
 import net.minecraft.command.argument.EntityArgumentType;
@@ -32,7 +33,7 @@ public class PackCommand {
 
     private static LiteralArgumentBuilder<ServerCommandSource> makeCommand(CommandRegistryAccess registryAccess) {
         return literal("pack")
-                .requires(required -> required.hasPermissionLevel(3))
+                .requires(ServerMain::hasConfigAccess)
                 .then(literal("set")
                         .executes(PackCommand::disablePack)
                         .then(argument("url", string())
@@ -87,7 +88,7 @@ public class PackCommand {
                 ,
                 true
         );
-        Main.updateHash().thenAccept(result -> {
+        ServerMain.updateHash().thenAccept(result -> {
             // Let's all hope that this doesn't cause threading issues :+1:
             if (result == null) {
                 // Error
@@ -149,7 +150,8 @@ public class PackCommand {
             return 0;
         }
 
-        Main.config.url.set(url).save();
+        ServerMain.config.url.set(url).save();
+        sendUpdate(context);
         source.sendFeedback( () -> MSG_PREFIX.copy()
                 .append("Pack URL has been updated. Reloading hash...")
                 ,
@@ -160,7 +162,8 @@ public class PackCommand {
     }
 
     private static int disablePack(CommandContext<ServerCommandSource> context) {
-        Main.config.url.set("").save();
+        ServerMain.config.url.set("").save();
+        sendUpdate(context);
         updateHashWithContext(context.getSource(), false);
         return 1;
     }
@@ -173,7 +176,7 @@ public class PackCommand {
     private static int getRequired(CommandContext<ServerCommandSource> context) {
         ServerCommandSource source = context.getSource();
 
-        Boolean required = Main.config.required.get();
+        Boolean required = ServerMain.config.required.get();
 
         source.sendFeedback(() -> MSG_PREFIX.copy()
                 .append("Pack is " + (required ? "required" : "optional"))
@@ -187,7 +190,8 @@ public class PackCommand {
         ServerCommandSource source = context.getSource();
 
         Boolean required = BoolArgumentType.getBool(context, "required");
-        Main.config.required.set(required).save();
+        ServerMain.config.required.set(required).save();
+        sendUpdate(context);
 
         source.sendFeedback( () -> MSG_PREFIX.copy()
                 .append("Pack is now " + (required ? "required" : "optional"))
@@ -198,7 +202,7 @@ public class PackCommand {
     }
 
     private static int showPrompt(CommandContext<ServerCommandSource> context) {
-        final Optional<Text> prompt = Main.config.getPrompt(context.getSource().getRegistryManager());
+        final Optional<Text> prompt = ServerMain.config.getPrompt(context.getSource().getRegistryManager());
         context.getSource().sendFeedback(
                 () -> prompt.map(
                         text -> MSG_PREFIX.copy()
@@ -215,8 +219,9 @@ public class PackCommand {
 
     private static int setPrompt(CommandContext<ServerCommandSource> context) {
         final Text prompt = TextArgumentType.getTextArgument(context, "prompt");
-        Main.config.setPrompt(prompt, context.getSource().getRegistryManager())
+        ServerMain.config.setPrompt(prompt, context.getSource().getRegistryManager())
                 .save();
+        sendUpdate(context);
         context.getSource().sendFeedback(
                 () -> MSG_PREFIX.copy()
                         .append("Prompt has been set to: ")
@@ -228,7 +233,8 @@ public class PackCommand {
     }
 
     private static int clearPrompt(CommandContext<ServerCommandSource> context) {
-        Main.config.setPrompt(null, null);
+        ServerMain.config.setPrompt(null, null);
+        sendUpdate(context);
         context.getSource().sendFeedback(
                 () -> MSG_PREFIX.copy()
                         .append("Prompt has been removed")
@@ -239,9 +245,9 @@ public class PackCommand {
     }
 
     private static int showInfo(CommandContext<ServerCommandSource> context) {
-        String url = Main.config.url.get();
-        boolean required = Main.config.required.get();
-        Optional<Text> prompt = Main.config.getPrompt(context.getSource().getRegistryManager());
+        String url = ServerMain.config.url.get();
+        boolean required = ServerMain.config.required.get();
+        Optional<Text> prompt = ServerMain.config.getPrompt(context.getSource().getRegistryManager());
         if (!url.isEmpty()) {
             context.getSource().sendFeedback(() ->
                             MSG_PREFIX.copy()
@@ -255,7 +261,7 @@ public class PackCommand {
                                     )
                                     .append("\n")
                                     .append("Pack hash: ")
-                                    .append(Optional.ofNullable(Main.getHashString())
+                                    .append(Optional.ofNullable(ServerMain.getHashString())
                                             .map(s -> Text.literal(s)
                                                     .formatted(Formatting.LIGHT_PURPLE)
                                                     .formatted(Formatting.ITALIC)
@@ -291,5 +297,9 @@ public class PackCommand {
         }
 
         return 1;
+    }
+
+    private static void sendUpdate(CommandContext<ServerCommandSource> context) {
+        Networking.sendConfigUpdate(context.getSource().getServer());
     }
 }

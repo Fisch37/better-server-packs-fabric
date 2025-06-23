@@ -9,12 +9,21 @@
     "repo": "https://github.com/Fisch37/BetterServerPacksFabric"
   },
   "license": "MIT",
-  "environment": "server",
+  "environment": "*",
   "entrypoints": {
-    "server": [
+    "main": [
       "de.fisch37.betterserverpacksfabric.Main"
+    ],
+    "server": [
+      "de.fisch37.betterserverpacksfabric.ServerMain"
+    ],
+    "client": [
+        "de.fisch37.betterserverpacksfabric.client.MainClient"
     ]
   },
+  "mixins": [
+    "mixins.json"
+  ],
   "depends": {
     "fabricloader": ">=${loader_version}",
     "fabric": "*",
