@@ -1,5 +1,8 @@
 package de.fisch37.betterserverpacksfabric;
 
+import de.fisch37.betterserverpacksfabric.config_serializers.InstantValueSerializer;
+import de.fisch37.betterserverpacksfabric.config_serializers.MaybeInstant;
+import de.fisch37.betterserverpacksfabric.config_serializers.MaybeSerializer;
 import de.maxhenkel.configbuilder.ConfigBuilder;
 import net.fabricmc.api.DedicatedServerModInitializer;
 import net.fabricmc.fabric.api.event.lifecycle.v1.ServerLifecycleEvents;
@@ -7,6 +10,8 @@ import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import de.fisch37.betterserverpacksfabric.pack_downloaders.HttpDownloader;
+import de.fisch37.betterserverpacksfabric.pack_downloaders.PackDownloader;
 
 import java.io.*;
 import java.net.MalformedURLException;
@@ -14,16 +19,15 @@ import java.net.URI;
 import java.net.URISyntaxException;
 import java.net.URL;
 import java.nio.file.Path;
-import java.security.DigestInputStream;
-import java.security.MessageDigest;
-import java.security.NoSuchAlgorithmException;
 import java.util.HexFormat;
+import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 
 public class Main implements DedicatedServerModInitializer {
     public static final String MOD_ID = "betterserverpacks";
     public static final Logger LOGGER = LoggerFactory.getLogger(MOD_ID);
     private static final byte SHA1_HASH_SIZE = 20;
+    private static PackDownloader downloader;
 
     public static Config config;
     private static byte @Nullable [] hash;
@@ -33,10 +37,17 @@ public class Main implements DedicatedServerModInitializer {
     @Override
     public void onInitializeServer() {
         config = ConfigBuilder.builder(Config::new)
+                .addValueSerializer(
+                        MaybeInstant.class,
+                        MaybeSerializer.normallyEmpty(
+                                InstantValueSerializer.ISO_INSTANT,
+                                MaybeInstant::fromOpt
+                        ))
                 .path(getModConfigFile())
                 .strict(true)
                 .saveAfterBuild(true)
                 .build();
+        downloader = new HttpDownloader();
         readHash();
         if (config.rehashOnStart.get()) {
             doRehashOnStart();
@@ -107,35 +118,29 @@ public class Main implements DedicatedServerModInitializer {
     private static void doRehashOnStart() {
         ServerLifecycleEvents.SERVER_STARTED.register(server -> {
             LOGGER.info("Updating pack hash...");
-            updateHash()
-                    .whenComplete((didReload, exc) -> {
-                        if (exc != null) {
-                            LOGGER.error("Failed to update pack hash", exc);
-                        } else {
-                            if (didReload) {
-                                LOGGER.info("Pack hash updated!");
-                            } else {
-                                LOGGER.info("No pack is set. Cannot hash it");
-                            }
-                        }
-                    });
+            updateHash().ifPresentOrElse(
+                    future -> future.thenAccept(state ->
+                        LOGGER.info("Pack hash updated!")
+                    ),
+                    () -> LOGGER.info("No pack is set. Cannot hash it")
+            );
         });
     }
 
     /**
+     * Starts a process to update the hash of the current pack,
+     * if one is set and returns a future to that state.
+     * The result of this operation will be logged to console.
      *
-     * @return A future to the running updating process.
-     *  succeeds with {@code false} if no pack url is set,
-     *  {@code true} if the pack was updated,
-     *  or with an exception, if there was an error.
-     * @throws IllegalStateException if the URL is malformed
+     * @return A future to the running updating process,
+     *  if a pack was set, else an empty optional.
+     *  The future completes with the new pack info
+     *  or an exception if one was encountered.
+     * @throws IllegalStateException if the current URL is malformed
      */
-    public static CompletableFuture<@NotNull Boolean> updateHash() throws IllegalStateException {
-        final var future = new CompletableFuture<Boolean>();
+    public static Optional<CompletableFuture<PackDownloader.@Nullable PackState>> updateHash() throws IllegalStateException {
         if (config.url.get().isEmpty()){
-            hash = null;
-            future.complete(false);
-            return future;
+            return Optional.empty();
         }
 
         URL url;
@@ -145,35 +150,23 @@ public class Main implements DedicatedServerModInitializer {
             throw new IllegalStateException("Pack URL has invalid format", e);
         }
 
-        // Ooo, threading in Minecraft code!
-        // It's fine though, as long as we don't touch any of Minecraft's stuff
-        new Thread(() -> {
-            // Wonderfully huge and broad exception handler
-            // (passes the exception into the CompletableFuture)
-            try {
-                MessageDigest digest;
-                try {
-                    digest = MessageDigest.getInstance("SHA-1");
-                } catch (NoSuchAlgorithmException e) {
-                    // SHA-1 is required per java docs
-                    LOGGER.error("JVM does not have SHA-1 hashing... WTF?");
-                    throw e;
-                }
-                try (InputStream data = url.openStream()) {
-                    new DigestInputStream(data, digest).readAllBytes();
-                } catch (IOException e) {
-                    LOGGER.error("Failed to load resource pack at {}", url);
-                    throw e;
-                }
-                hash = digest.digest();
-                Main.saveHash();
-
-                future.complete(true);
-            } catch (Exception e) {
-                future.completeExceptionally(e);
-            }
-        }, "BSPReloadThread").start();
-        return future;
+        return Optional.of(
+                downloader.getHashInThread(
+                    url,
+                    config.lastPolled.get().asOptional().orElse(null)
+                ).whenComplete((packState, exc) -> {
+                    if (packState != null) {
+                        hash = packState.hash();
+                        config.lastPolled
+                                .set(MaybeInstant.of(packState.polledAt()))
+                                .save();
+                        saveHash();
+                    }
+                    if (exc != null) {
+                        LOGGER.error("Error while trying to update pack hash", exc);
+                    }
+                })
+        );
     }
 
 

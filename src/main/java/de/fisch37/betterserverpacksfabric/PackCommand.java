@@ -6,6 +6,7 @@ import com.mojang.brigadier.builder.LiteralArgumentBuilder;
 import com.mojang.brigadier.context.CommandContext;
 import com.mojang.brigadier.exceptions.CommandSyntaxException;
 import com.mojang.brigadier.exceptions.SimpleCommandExceptionType;
+import de.fisch37.betterserverpacksfabric.config_serializers.MaybeInstant;
 import net.fabricmc.fabric.api.command.v2.CommandRegistrationCallback;
 import net.minecraft.command.CommandRegistryAccess;
 import net.minecraft.command.argument.EntityArgumentType;
@@ -93,44 +94,50 @@ public class PackCommand {
                 ,
                 true
         );
-        Main.updateHash().whenComplete((result, exc) -> {
-            // Let's all hope that this doesn't cause threading issues :+1:
-            if (exc != null) {
-                Main.LOGGER.error("Failed to update hash", exc);
-                source.sendFeedback(() -> MSG_PREFIX.copy()
-                                .append(Text.literal(
-                                        "Failed to update hash."
-                                                + "Please check the server logs for more information."
+        Main.updateHash().ifPresentOrElse(
+                // Let's all hope that this doesn't cause threading issues :+1:
+                future -> future.whenComplete((packState, exc) -> {
+                    if (exc != null) {
+                        source.sendFeedback(
+                                () -> MSG_PREFIX.copy()
+                                        .append(Text.literal(
+                                                "Failed to update hash."
+                                                        + "Please check the server logs for more information."
+                                                )
+                                                .formatted(Formatting.RED)
                                         )
-                                        .formatted(Formatting.RED)
-                                )
-                        ,
-                        true
-                );
-            } else if (result) {
-                // Hash updated
-                source.sendFeedback(() -> MSG_PREFIX.copy()
-                                .append("Pack Hash has been updated!")
-                        ,
-                        true);
+                                ,
+                                true
+                        );
+                    } else {
+                        // Hash updated
+                        source.sendFeedback(
+                                () -> MSG_PREFIX.copy()
+                                        .append("Pack Hash has been updated!")
+                                ,
+                                true);
 
-                if (pushAfterSet) {
-                    source.sendFeedback(() -> MSG_PREFIX.copy()
-                                    .append("Pushing to players...")
+                        if (pushAfterSet) {
+                            source.sendFeedback(
+                                    () -> MSG_PREFIX.copy()
+                                            .append("Pushing to players...")
+                                    ,
+                                    true);
+                            ResourcePackHandler.pushTo(source.getServer());
+                        }
+                    }
+                }),
+                () -> {
+                    // Hash removed (no pack selected)
+                    source.sendFeedback(
+                            () -> MSG_PREFIX.copy()
+                                    .append("BetterServerPacks has been disabled. ")
+                                    .append("This cannot be pushed to the players :(")
                             ,
-                            true);
-                    ResourcePackHandler.pushTo(source.getServer());
+                            true
+                    );
                 }
-            } else {
-                // Hash removed (no pack selected)
-                source.sendFeedback(() -> MSG_PREFIX.copy()
-                                .append("BetterServerPacks has been disabled. ")
-                                .append("This cannot be pushed to the players :(")
-                        ,
-                        true
-                );
-            }
-        });
+        );
     }
 
     private static int setPack(CommandContext<ServerCommandSource> context, boolean pushAfterSet) {
@@ -156,6 +163,7 @@ public class PackCommand {
         }
 
         Main.config.url.set(url).save();
+        Main.config.lastPolled.set(MaybeInstant.empty()).save();
         source.sendFeedback( () -> MSG_PREFIX.copy()
                 .append("Pack URL has been updated. Reloading hash...")
                 ,

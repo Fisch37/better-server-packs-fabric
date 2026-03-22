@@ -3,6 +3,7 @@ package de.fisch37.betterserverpacksfabric;
 import com.mojang.brigadier.StringReader;
 import com.mojang.brigadier.exceptions.CommandSyntaxException;
 import com.mojang.serialization.DynamicOps;
+import de.fisch37.betterserverpacksfabric.config_serializers.MaybeInstant;
 import de.maxhenkel.configbuilder.ConfigBuilder;
 import de.maxhenkel.configbuilder.entry.ConfigEntry;
 import net.minecraft.command.argument.TextArgumentType;
@@ -22,16 +23,18 @@ import java.util.Optional;
 import static de.fisch37.betterserverpacksfabric.Main.LOGGER;
 
 public class Config {
-    public ConfigEntry<String> url;
-    public ConfigEntry<Boolean> rehashOnStart;
-    public ConfigEntry<Boolean> required;
-    public ConfigEntry<String> prompt;
+    public final ConfigEntry<String> url;
+    public final ConfigEntry<Boolean> rehashOnStart;
+    public final ConfigEntry<Boolean> required;
+    public final ConfigEntry<String> prompt;
+    public final ConfigEntry<MaybeInstant> lastPolled;
 
     public Config(ConfigBuilder builder) {
         url = builder.stringEntry("url", "");
         rehashOnStart = builder.booleanEntry("rehash_on_start", false);
         required = builder.booleanEntry("required", false);
         prompt = builder.stringEntry("prompt", "");
+        lastPolled = builder.entry("last_hash_update", MaybeInstant.empty());
     }
 
     public Optional<Text> getPrompt(@NotNull RegistryWrapper.WrapperLookup registries) {
