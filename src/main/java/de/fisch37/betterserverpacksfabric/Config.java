@@ -6,14 +6,14 @@ import com.mojang.serialization.DynamicOps;
 import de.fisch37.betterserverpacksfabric.config_serializers.MaybeInstant;
 import de.maxhenkel.configbuilder.ConfigBuilder;
 import de.maxhenkel.configbuilder.entry.ConfigEntry;
-import net.minecraft.command.argument.TextArgumentType;
-import net.minecraft.nbt.NbtElement;
+import net.minecraft.commands.arguments.ComponentArgument;
+import net.minecraft.core.HolderLookup;
 import net.minecraft.nbt.NbtOps;
-import net.minecraft.nbt.SnbtParsing;
-import net.minecraft.registry.RegistryWrapper;
-import net.minecraft.text.Text;
-import net.minecraft.text.TextCodecs;
-import net.minecraft.util.packrat.Parser;
+import net.minecraft.nbt.SnbtGrammar;
+import net.minecraft.nbt.Tag;
+import net.minecraft.network.chat.Component;
+import net.minecraft.network.chat.ComponentSerialization;
+import net.minecraft.util.parsing.packrat.commands.CommandArgumentParser;
 import org.jetbrains.annotations.Contract;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
@@ -37,7 +37,7 @@ public class Config {
         lastPolled = builder.entry("last_hash_update", MaybeInstant.empty());
     }
 
-    public Optional<Text> getPrompt(@NotNull RegistryWrapper.WrapperLookup registries) {
+    public Optional<Component> getPrompt(@NotNull HolderLookup.Provider registries) {
         String promptString = this.prompt.get();
         if (promptString.isBlank()) {
             return Optional.empty();
@@ -53,7 +53,7 @@ public class Config {
     }
 
     @Contract("null, null -> _; !null, !null -> _")
-    public ConfigEntry<String> setPrompt(@Nullable Text prompt, @Nullable RegistryWrapper.WrapperLookup registries) {
+    public ConfigEntry<String> setPrompt(@Nullable Component prompt, @Nullable HolderLookup.Provider registries) {
         if (prompt == null) {
             this.prompt.set("");
         } else {
@@ -63,20 +63,20 @@ public class Config {
         return this.prompt;
     }
 
-    private static final DynamicOps<NbtElement> OPS = NbtOps.INSTANCE;
-    private static final Parser<NbtElement> PARSER = SnbtParsing.createParser(OPS);
+    private static final DynamicOps<Tag> OPS = NbtOps.INSTANCE;
+    private static final CommandArgumentParser<Tag> PARSER = SnbtGrammar.createParser(OPS);
 
-    private static Text textFromSnbt(String snbt, @Nullable RegistryWrapper.WrapperLookup registries)
+    private static Component textFromSnbt(String snbt, @Nullable HolderLookup.Provider registries)
             throws CommandSyntaxException {
         final var reader = new StringReader(snbt);
-        var ops = registries == null ? OPS : registries.getOps(OPS);
-        return PARSER.withDecoding(ops, PARSER, TextCodecs.CODEC, TextArgumentType.INVALID_COMPONENT_EXCEPTION)
-                .parse(reader);
+        var ops = registries == null ? OPS : registries.createSerializationContext(OPS);
+        return PARSER.withCodec(ops, PARSER, ComponentSerialization.CODEC, ComponentArgument.ERROR_INVALID_COMPONENT)
+                .parseForCommands(reader);
     }
 
-    private static String textToSnbt(Text text, RegistryWrapper.WrapperLookup registries)
+    private static String textToSnbt(Component text, HolderLookup.Provider registries)
             throws IllegalStateException {
-        var element = TextCodecs.CODEC.encodeStart(registries.getOps(OPS), text).getOrThrow();
+        var element = ComponentSerialization.CODEC.encodeStart(registries.createSerializationContext(OPS), text).getOrThrow();
         // This just feels wrong, but it seems this is the correct way.
         return element.toString();
     }

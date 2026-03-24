@@ -8,16 +8,15 @@ import com.mojang.brigadier.exceptions.CommandSyntaxException;
 import com.mojang.brigadier.exceptions.SimpleCommandExceptionType;
 import de.fisch37.betterserverpacksfabric.config_serializers.MaybeInstant;
 import net.fabricmc.fabric.api.command.v2.CommandRegistrationCallback;
-import net.minecraft.command.CommandRegistryAccess;
-import net.minecraft.command.argument.EntityArgumentType;
-import net.minecraft.command.argument.TextArgumentType;
-import net.minecraft.server.command.CommandManager;
-import net.minecraft.server.command.ServerCommandSource;
-import net.minecraft.text.ClickEvent;
-import net.minecraft.text.Style;
-import net.minecraft.text.Text;
-import net.minecraft.util.Formatting;
-
+import net.minecraft.ChatFormatting;
+import net.minecraft.commands.CommandBuildContext;
+import net.minecraft.commands.CommandSourceStack;
+import net.minecraft.commands.Commands;
+import net.minecraft.commands.arguments.ComponentArgument;
+import net.minecraft.commands.arguments.EntityArgument;
+import net.minecraft.network.chat.ClickEvent;
+import net.minecraft.network.chat.Component;
+import net.minecraft.network.chat.Style;
 import java.net.MalformedURLException;
 import java.net.URI;
 import java.net.URISyntaxException;
@@ -26,20 +25,20 @@ import java.util.Optional;
 import java.util.function.Supplier;
 
 import static com.mojang.brigadier.arguments.StringArgumentType.string;
-import static net.minecraft.server.command.CommandManager.*;
+import static net.minecraft.commands.Commands.*;
 
 public class PackCommand {
-    public final static Text MSG_PREFIX = Text.literal("")
-            .append(Text.literal("[").formatted(Formatting.YELLOW))
-            .append(Text.literal("BSP").formatted(Formatting.AQUA))
-            .append(Text.literal("] ").formatted(Formatting.YELLOW));
+    public final static Component MSG_PREFIX = Component.literal("")
+            .append(Component.literal("[").withStyle(ChatFormatting.YELLOW))
+            .append(Component.literal("BSP").withStyle(ChatFormatting.AQUA))
+            .append(Component.literal("] ").withStyle(ChatFormatting.YELLOW));
     private static final SimpleCommandExceptionType INVALID_URI_EXCEPTION = new SimpleCommandExceptionType(
-            Text.translatableWithFallback("bsp.commands.exc.invalid_uri", "The pack URI is malformed. You can try fixing this in the config or just use /pack set <url> again")
+            Component.translatableWithFallback("bsp.commands.exc.invalid_uri", "The pack URI is malformed. You can try fixing this in the config or just use /pack set <url> again")
     );
 
-    private static LiteralArgumentBuilder<ServerCommandSource> makeCommand(CommandRegistryAccess registryAccess) {
+    private static LiteralArgumentBuilder<CommandSourceStack> makeCommand(CommandBuildContext registryAccess) {
         return literal("pack")
-                .requires(CommandManager.requirePermissionLevel(ADMINS_CHECK))
+                .requires(Commands.hasPermission(LEVEL_ADMINS))
                 .then(literal("set")
                         .executes(PackCommand::disablePack)
                         .then(argument("url", string())
@@ -57,9 +56,9 @@ public class PackCommand {
                 )
                 .then(literal("push")
                         .executes(context -> ResourcePackHandler.pushTo(context.getSource().getServer()))
-                        .then(argument("players", EntityArgumentType.players())
+                        .then(argument("players", EntityArgument.players())
                                 .executes(context -> ResourcePackHandler.pushTo(
-                                        EntityArgumentType.getPlayers(context, "players")
+                                        EntityArgument.getPlayers(context, "players")
                                 ))
                         )
                 )
@@ -70,7 +69,7 @@ public class PackCommand {
                         )
                 ).then(literal("prompt")
                         .executes(PackCommand::showPrompt)
-                        .then(argument("prompt", TextArgumentType.text(registryAccess))
+                        .then(argument("prompt", ComponentArgument.textComponent(registryAccess))
                                 .executes(PackCommand::setPrompt)
                         )
                         .then(literal("clear")
@@ -88,8 +87,8 @@ public class PackCommand {
         );
     }
 
-    private static void updateHashWithContext(ServerCommandSource source, boolean pushAfterSet) {
-        source.sendFeedback(() -> MSG_PREFIX.copy()
+    private static void updateHashWithContext(CommandSourceStack source, boolean pushAfterSet) {
+        source.sendSuccess(() -> MSG_PREFIX.copy()
                 .append("Updating pack hash...")
                 ,
                 true
@@ -98,27 +97,27 @@ public class PackCommand {
                 // Let's all hope that this doesn't cause threading issues :+1:
                 future -> future.whenComplete((packState, exc) -> {
                     if (exc != null) {
-                        source.sendFeedback(
+                        source.sendSuccess(
                                 () -> MSG_PREFIX.copy()
-                                        .append(Text.literal(
+                                        .append(Component.literal(
                                                 "Failed to update hash."
                                                         + "Please check the server logs for more information."
                                                 )
-                                                .formatted(Formatting.RED)
+                                                .withStyle(ChatFormatting.RED)
                                         )
                                 ,
                                 true
                         );
                     } else {
                         // Hash updated
-                        source.sendFeedback(
+                        source.sendSuccess(
                                 () -> MSG_PREFIX.copy()
                                         .append("Pack Hash has been updated!")
                                 ,
                                 true);
 
                         if (pushAfterSet) {
-                            source.sendFeedback(
+                            source.sendSuccess(
                                     () -> MSG_PREFIX.copy()
                                             .append("Pushing to players...")
                                     ,
@@ -129,7 +128,7 @@ public class PackCommand {
                 }),
                 () -> {
                     // Hash removed (no pack selected)
-                    source.sendFeedback(
+                    source.sendSuccess(
                             () -> MSG_PREFIX.copy()
                                     .append("BetterServerPacks has been disabled. ")
                                     .append("This cannot be pushed to the players :(")
@@ -140,31 +139,31 @@ public class PackCommand {
         );
     }
 
-    private static int setPack(CommandContext<ServerCommandSource> context, boolean pushAfterSet) {
-        final Supplier<Text> INVALID_URL_ERROR = (
+    private static int setPack(CommandContext<CommandSourceStack> context, boolean pushAfterSet) {
+        final Supplier<Component> INVALID_URL_ERROR = (
                 () -> MSG_PREFIX.copy()
-                .append(Text.literal("The text supplied is not a valid URL")
-                        .formatted(Formatting.RED))
+                .append(Component.literal("The text supplied is not a valid URL")
+                        .withStyle(ChatFormatting.RED))
         );
 
-        ServerCommandSource source = context.getSource();
+        CommandSourceStack source = context.getSource();
         String url = StringArgumentType.getString(context, "url");
         URL parsedUrl;
 
         try { parsedUrl = new URI(url).toURL(); }
         catch (URISyntaxException | MalformedURLException | IllegalArgumentException e) {
-            context.getSource().sendFeedback(INVALID_URL_ERROR, false);
+            context.getSource().sendSuccess(INVALID_URL_ERROR, false);
             return 0;
         }
         String protocol = parsedUrl.getProtocol();
         if ((!protocol.equals("https")) && (!protocol.equals("http"))) {
-            source.sendFeedback(INVALID_URL_ERROR, false);
+            source.sendSuccess(INVALID_URL_ERROR, false);
             return 0;
         }
 
         Main.config.url.set(url).save();
         Main.config.lastPolled.set(MaybeInstant.empty()).save();
-        source.sendFeedback( () -> MSG_PREFIX.copy()
+        source.sendSuccess( () -> MSG_PREFIX.copy()
                 .append("Pack URL has been updated. Reloading hash...")
                 ,
                 true
@@ -173,23 +172,23 @@ public class PackCommand {
         return 1;
     }
 
-    private static int disablePack(CommandContext<ServerCommandSource> context) {
+    private static int disablePack(CommandContext<CommandSourceStack> context) {
         Main.config.url.set("").save();
         updateHashWithContext(context.getSource(), false);
         return 1;
     }
 
-    private static int reloadPack(CommandContext<ServerCommandSource> context, boolean pushAfterReload) {
+    private static int reloadPack(CommandContext<CommandSourceStack> context, boolean pushAfterReload) {
         updateHashWithContext(context.getSource(), pushAfterReload);
         return 1;
     }
 
-    private static int getRequired(CommandContext<ServerCommandSource> context) {
-        ServerCommandSource source = context.getSource();
+    private static int getRequired(CommandContext<CommandSourceStack> context) {
+        CommandSourceStack source = context.getSource();
 
         Boolean required = Main.config.required.get();
 
-        source.sendFeedback(() -> MSG_PREFIX.copy()
+        source.sendSuccess(() -> MSG_PREFIX.copy()
                 .append("Pack is " + (required ? "required" : "optional"))
                 ,
                 false
@@ -197,13 +196,13 @@ public class PackCommand {
         return 1;
     }
 
-    private static int setRequired(CommandContext<ServerCommandSource> context) {
-        ServerCommandSource source = context.getSource();
+    private static int setRequired(CommandContext<CommandSourceStack> context) {
+        CommandSourceStack source = context.getSource();
 
         Boolean required = BoolArgumentType.getBool(context, "required");
         Main.config.required.set(required).save();
 
-        source.sendFeedback( () -> MSG_PREFIX.copy()
+        source.sendSuccess( () -> MSG_PREFIX.copy()
                 .append("Pack is now " + (required ? "required" : "optional"))
                 ,
                 true
@@ -211,9 +210,9 @@ public class PackCommand {
         return 1;
     }
 
-    private static int showPrompt(CommandContext<ServerCommandSource> context) {
-        final Optional<Text> prompt = Main.config.getPrompt(context.getSource().getRegistryManager());
-        context.getSource().sendFeedback(
+    private static int showPrompt(CommandContext<CommandSourceStack> context) {
+        final Optional<Component> prompt = Main.config.getPrompt(context.getSource().registryAccess());
+        context.getSource().sendSuccess(
                 () -> prompt.map(
                         text -> MSG_PREFIX.copy()
                                 .append("Current Prompt is: ")
@@ -227,11 +226,11 @@ public class PackCommand {
         return 1;
     }
 
-    private static int setPrompt(CommandContext<ServerCommandSource> context) {
-        final Text prompt = TextArgumentType.getTextArgument(context, "prompt");
-        Main.config.setPrompt(prompt, context.getSource().getRegistryManager())
+    private static int setPrompt(CommandContext<CommandSourceStack> context) {
+        final Component prompt = ComponentArgument.getRawComponent(context, "prompt");
+        Main.config.setPrompt(prompt, context.getSource().registryAccess())
                 .save();
-        context.getSource().sendFeedback(
+        context.getSource().sendSuccess(
                 () -> MSG_PREFIX.copy()
                         .append("Prompt has been set to: ")
                         .append(prompt)
@@ -241,9 +240,9 @@ public class PackCommand {
         return 1;
     }
 
-    private static int clearPrompt(CommandContext<ServerCommandSource> context) {
+    private static int clearPrompt(CommandContext<CommandSourceStack> context) {
         Main.config.setPrompt(null, null);
-        context.getSource().sendFeedback(
+        context.getSource().sendSuccess(
                 () -> MSG_PREFIX.copy()
                         .append("Prompt has been removed")
                 ,
@@ -252,7 +251,7 @@ public class PackCommand {
         return 1;
     }
 
-    private static int showInfo(CommandContext<ServerCommandSource> context) throws CommandSyntaxException {
+    private static int showInfo(CommandContext<CommandSourceStack> context) throws CommandSyntaxException {
         String url = Main.config.url.get();
         URI uriObj;
         try {
@@ -261,46 +260,46 @@ public class PackCommand {
             throw INVALID_URI_EXCEPTION.create();
         }
         boolean required = Main.config.required.get();
-        Optional<Text> prompt = Main.config.getPrompt(context.getSource().getRegistryManager());
+        Optional<Component> prompt = Main.config.getPrompt(context.getSource().registryAccess());
         if (!url.isEmpty()) {
-            context.getSource().sendFeedback(() ->
+            context.getSource().sendSuccess(() ->
                             MSG_PREFIX.copy()
                                     .append("Pack URL: ")
-                                    .append(Text.literal(url)
-                                            .fillStyle(Style.EMPTY.withClickEvent(new ClickEvent.OpenUrl(uriObj)))
-                                            .formatted(Formatting.GREEN)
-                                            .formatted(Formatting.UNDERLINE)
+                                    .append(Component.literal(url)
+                                            .withStyle(Style.EMPTY.withClickEvent(new ClickEvent.OpenUrl(uriObj)))
+                                            .withStyle(ChatFormatting.GREEN)
+                                            .withStyle(ChatFormatting.UNDERLINE)
                                     )
                                     .append("\n")
                                     .append("Pack hash: ")
                                     .append(Optional.ofNullable(Main.getHashString())
-                                            .map(s -> Text.literal(s)
-                                                    .formatted(Formatting.LIGHT_PURPLE)
-                                                    .formatted(Formatting.ITALIC)
+                                            .map(s -> Component.literal(s)
+                                                    .withStyle(ChatFormatting.LIGHT_PURPLE)
+                                                    .withStyle(ChatFormatting.ITALIC)
                                             )
-                                            .orElse(Text.literal("undetermined").formatted(Formatting.GRAY))
+                                            .orElse(Component.literal("undetermined").withStyle(ChatFormatting.GRAY))
                                     )
                                     .append("\n")
                                     .append("Pack is ")
                                     .append(
                                             required
-                                                    ? Text.literal("required")
-                                                    .formatted(Formatting.RED)
-                                                    : Text.literal("optional")
-                                                    .formatted(Formatting.YELLOW)
+                                                    ? Component.literal("required")
+                                                    .withStyle(ChatFormatting.RED)
+                                                    : Component.literal("optional")
+                                                    .withStyle(ChatFormatting.YELLOW)
                                     )
                                     .append("\n")
                                     .append(prompt
-                                            .map(text -> Text.literal("Prompt: \n    ")
+                                            .map(text -> Component.literal("Prompt: \n    ")
                                                     .append(text)
                                             )
-                                            .orElseGet(() -> Text.literal("No prompt is set"))
+                                            .orElseGet(() -> Component.literal("No prompt is set"))
                                     )
                     ,
                     false
             );
         } else {
-            context.getSource().sendFeedback(() ->
+            context.getSource().sendSuccess(() ->
                     MSG_PREFIX.copy()
                             .append("No resourcepack is set")
                     ,
